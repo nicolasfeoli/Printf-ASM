@@ -1,0 +1,8 @@
+#include "STDIO.H"
+
+main()
+{
+  printf("TAMANO DE INT: %d\n",sizeof(int));
+  printf("TAMANO DE CHAR: %d\n",sizeof(char));
+  printf("TAMANO DE CHAR*: %d\n",sizeof(char*));
+}
