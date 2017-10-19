@@ -20,11 +20,11 @@ datos segment
 
     buffer db 1000 dup(?),'$' ;En este buffer se va a poner el string final que se va a imprimir.    
  
-    stringParametro db "Prueba, %s JAJA era broma %s",0
+    stringParametro db "Prueba, %s Esta es una prueba %d",0
 
     stringAgregado db "hola",0
 
-    dirStr dw 0,0
+    ;dirStr dw 0,0
 
     error  db "Error, la opcion que ingreso es incorrecta, intente utilizar -A", 0Dh, 0Ah
            db "para desplegar la ayuda",0Dh, 0Ah, '$'
@@ -52,20 +52,18 @@ imprimeAcercaDe proc
         lea dx, acerca
         int 21h
         ret
-
  imprimeAcercaDe endp
 
- msjError proc
+msjError proc
   ;Imprime el mensaje de error del programa
          mov ah, 09h ; subrutina de la interrupcion 21h para imprimir string
          lea dx, error
          int 21h
          
-         ;call cerrarPrograma
-     
+         ;call cerrarPrograma    
  msjError endp
 
- imprimirNumeros proc
+imprimirNumeros proc
     ; recibe el numero en ax
     ; usa los registros bx, dx, cx
          push ax
@@ -90,8 +88,9 @@ imprimeAcercaDe proc
                 ;para darle vuelta al numero
          add dl, 30h ;pasar dl a ascii
          
-         mov ah, 2 ;rutina de la 21h para imprimir caracter
-         int 21h
+
+         ;mov ah, 2 ;rutina de la 21h para imprimir caracter
+         ;int 21h
          dec cx
          jnz salCicNum
          
@@ -103,35 +102,41 @@ imprimeAcercaDe proc
  
  imprimirNumeros endp
 
+dirStr equ 2
 
+strOri equ 4
+
+segundoParametro equ 8
+
+;DOS RESUMENES EXTRA=HACER BONITO EL EXAMEN DE SMALLTALK
  _H8printf proc
-
     push bp
     mov bp, sp
+    sub sp, 8 ;reserva 8 bytes para memoria local
+              ; Entonces en el bp+4 -> offset str original
+              ;                bp+6 -> segmento del str original
+              ;                bp+8 -> puede ser un entero o el offset del string
 
     ;sacar el primer parametro -> direccion del string.
-    lea ax, stringParametro ; se cambiara por mov ax, [bp+4]
-    mov word ptr dirStr,ds
-    mov word ptr dirStr[2], ax
 
-    xor di,di
-    xor si,si
+    lea di, buffer
+    mov si,[bp+strOri]
     ciclo: 
-        mov dl,byte ptr stringParametro[si]
+        mov dl,byte ptr [si]
         cmp dl,0
         jz salir
 
         cmp dl, '%'
         jz colocarInfo
         ;mov dl, byte ptr [stringParametro+si]
-        mov byte ptr buffer[di], dl
+        mov byte ptr [di], dl
         inc di 
         inc si 
         jmp ciclo
 
         colocarInfo:
             inc si
-            mov dl,byte ptr stringParametro[si]
+            mov dl,byte ptr [si]
             cmp dl, 's'
             jz agregarString
             cmp dl, 'd'
@@ -141,12 +146,13 @@ imprimeAcercaDe proc
 
             agregarString:
                 push si
-                xor si, si
+                ;xor si, si
+                lea si,stringAgregado
                 cicloAgregarString:
-                    mov dl, byte ptr stringAgregado[si]
+                    mov dl, byte ptr [si]
                     cmp dl, 0
                     jz terminoAgregarString
-                    mov byte ptr buffer[di], dl
+                    mov byte ptr [di], dl
                     inc di
                     inc si
                     jmp cicloAgregarString
@@ -156,17 +162,38 @@ imprimeAcercaDe proc
                     jmp ciclo
 
             agregarEntero:
+                mov ax, word ptr [bp+segundoParametro]
+                xor dx, dx
+                div bx    ; el residuo queda en dx. Siempre va a estar en dl.
+                push dx   ; guarda el digito en la pila
+                inc cx    ; incrementa el contador
+                cmp ax, 0 ; si ax=0 sale
+                jz terminoAgregarEntero
+                jmp agregarEntero
+                         
+                terminoAgregarEntero:
+                    pop dx ;saca el ultimo digito en meter a la pila
+                           ;para darle vuelta al numero
+                    add dl, 30h ;pasar dl a ascii
+
+                    mov byte ptr [di],dl
+                    ;mov ah, 2 ;rutina de la 21h para imprimir caracter
+                    ;int 21h
+                    inc di
+                    dec cx
+                    jnz terminoAgregarEntero
 
         inc di 
         inc si 
         jmp ciclo
     salir:
     ;inc di
-    mov byte ptr buffer[di], '$'
-    lea dx, buffer
+    mov byte ptr [di], '$'
+    mov dx, di
     mov ah, 09h
     int 21h
 
+    mov sp, bp
     pop bp
     ret
  _H8printf endp
@@ -184,6 +211,12 @@ imprimeAcercaDe proc
          
          call imprimeAcercaDe
 
+         ;lea dx, stringAgregado
+         mov dx, 52
+         push dx
+         push dx
+         lea dx, stringParametro
+         push dx
          call _H8printf
 
          mov ax, 4C00h
