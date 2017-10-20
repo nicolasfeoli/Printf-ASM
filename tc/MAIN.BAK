@@ -1,0 +1,28 @@
+#include "stdio.h"
+#include "main.h"
+/*Si haciendo ligas le vuelve a salir el error de fixup overflow
+  lo que tiene que hacer es poner -ml antes de los nombres de archivos cuando llama a tcc*/
+int main()
+{
+	int res = 0;
+	const char* hola = "HOLA %d";
+	printf(hola,res);
+	/*char * msj = "Nicolas"; */
+	/*printf("%d\n",sizeof(msj)); */
+	scanf("%d", &res);
+	printf("%d\n", voltearNumero(res));
+	H8Printf("Hola %s","jaja");
+	return 0;
+}
+
+int voltearNumero(int numero)
+{
+	int final = 0;
+	while(numero)
+	{
+	      final = final*10;
+	      final = final + numero % 10;
+	      numero = numero / 10;
+	}
+	return final;
+}
